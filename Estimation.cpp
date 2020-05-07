@@ -47,6 +47,7 @@ float Vector::absolute(){
 void AttitudeEstimator::Update(float GyrX,float GyrY,float GyrZ,float dt){
 	//Gyr is AngularVelocity in (deg/s)
 	//dt is delta time in seconds
+	/*
 	float sx = sinf(GyrX * rad_per_deg * 0.5f * dt)
 	 	, sy = sinf(GyrY * rad_per_deg * 0.5f * dt)
 	 	, sz = sinf(GyrZ * rad_per_deg * 0.5f * dt)
@@ -62,6 +63,34 @@ void AttitudeEstimator::Update(float GyrX,float GyrY,float GyrZ,float dt){
 	//q = q.multi((Quaternion){ 0, sy,  0, cy});
 	//q = q.multi((Quaternion){ 0,  0, sz, cz});
 	q = q.multi(dq);
+	*/
+	
+	// 近似積分
+	// q = 0.5*dt*ω*q + q
+	// 簡単に実装するために，角速度[rad/s]を純虚四元数として扱う
+	Quaternion omega_pure = (Quaternion){
+		rad_per_deg * GyroX,
+		rad_per_deg * GyroY,
+		rad_per_deg * GyroZ,
+		0.0f
+	};
+	float coef = 0.5f * dt;
+	Quaternion tmp = q.multi(omega_pure);  // ω*q
+	q = (Quaternion){
+		coef * tmp.x + q.x,
+		coef * tmp.y + q.y,
+		coef * tmp.z + q.z,
+		coef * tmp.w + q.w
+	};
+	// 正規化
+	float norm_inv = 1.0f / sqrtf(q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w);
+	q = (Quaternion){
+		q.x * norm_inv,
+		q.y * norm_inv,
+		q.z * norm_inv,
+		q.w * norm_inv
+	};
+	
 	time += dt;
 }
 
